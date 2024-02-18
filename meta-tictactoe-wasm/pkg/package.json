@@ -1,0 +1,14 @@
+{
+  "name": "meta-tictactoe-wasm",
+  "version": "0.1.0",
+  "files": [
+    "meta_tictactoe_wasm_bg.wasm",
+    "meta_tictactoe_wasm.js",
+    "meta_tictactoe_wasm.d.ts"
+  ],
+  "module": "meta_tictactoe_wasm.js",
+  "types": "meta_tictactoe_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

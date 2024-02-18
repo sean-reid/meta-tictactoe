@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Tic-Tac-Toe</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 170px); /* Adjust size to fit sub-boards */
+            gap: 20px; /* Space between sub-boards */
+            padding: 20px;
+            border: 0px solid #444; /* Optional: border around the entire game board */
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Optional: shadow for visual depth */
+        }
+        .sub-board {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            gap: 2px; /* Space between cells within a sub-board */
+            padding: 5px; /* Padding inside sub-boards, creating visual separation */
+            border: 1px solid #aaa; /* Light border for sub-boards */
+            border-radius: 10px; /* Rounded corners for sub-boards */
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ddd; /* Light border for cells */
+            border-radius: 5px; /* Rounded corners for cells */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+            transition: background-color 0.2s; /* Smooth background transition */
+        }
+        .cell.o { /* Custom class for O cells */
+            background-color: #ffcccc; /* Reddish background for O */
+        }
+        .cell.x { /* Custom class for x cells */
+            background-color: #ccffcc; /* Greenish background for X */
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%; /* Could be more or less, depending on screen size */
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+            color: #343a40;
+            text-align: center;
+            padding: 0px 0px;
+            font-size: 2rem;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <script type="module" src="meta-tictactoe-wasm/pkg/meta_tictactoe_wasm.js"></script>
+    <div id="board" class="board"></div>
+    <script type="module">
+        import init, { GameStateWrapper, Minimax } from './meta-tictactoe-wasm/pkg/meta_tictactoe_wasm.js';
+
+        async function main() {
+            await init(); // Initialize the WebAssembly module
+
+            const game = GameStateWrapper.new(); // Create a new game instance
+            renderBoard(game);
+
+            function indexToRowCol(index) {
+                return {
+                    row: Math.floor(index / 3),
+                    col: index % 3,
+                };
+            }
+
+            async function renderBoard(game) {
+                const boardContainer = document.getElementById('board');
+                boardContainer.innerHTML = ''; // Clear previous board
+            
+                const boardState = game.get_board_state();
+                boardState.forEach((subBoardsRow, subBoardRowIndex) => {
+                    const subBoardsRowElement = document.createElement('div');
+                    subBoardsRowElement.className = 'game-board';
+                    subBoardsRow.forEach((subBoard, subBoardColIndex) => {
+                        const subBoardIndex = subBoardRowIndex * 3 + subBoardColIndex;
+                        const subBoardElement = document.createElement('div');
+                        subBoardElement.className = 'sub-board';
+                        subBoard.forEach((row, rowIndex) => {
+                            row.forEach((cell, colIndex) => {
+                                const cellIndex = rowIndex * 3 + colIndex;
+                                const cellElement = document.createElement('div');
+                                cellElement.className = `cell ${cell.toLowerCase()}`;
+                                cellElement.addEventListener('click', () => handleCellClick(subBoardIndex, cellIndex));
+                                subBoardElement.appendChild(cellElement);
+                            });
+                        });
+                        subBoardsRowElement.appendChild(subBoardElement);
+                    });
+                    boardContainer.appendChild(subBoardsRowElement);
+                });
+            }
+
+            function handleCellClick(subBoardIndex, cellIndex) {
+                const { row: subBoardRow, col: subBoardCol } = indexToRowCol(subBoardIndex);
+                const { row: cellRow, col: cellCol } = indexToRowCol(cellIndex);
+                const valid = game.apply_json_move({
+                    board_row: subBoardRow,
+                    board_col: subBoardCol,
+                    row: cellRow,
+                    col: cellCol,
+                }); 
+                if (valid) {
+                    const best_move = Minimax.find_best_move(game, 3);
+                    game.apply_json_move(best_move);
+                }
+                renderBoard(game); // Re-render the board
+            }
+        }
+
+        main().catch(console.error);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Get the modal
+            var modal = document.getElementById("rules-modal");
+        
+            // Get the button that opens the modal
+            var btn = document.getElementById("show-rules");
+        
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
+        
+            // When the user clicks on the button, open the modal
+            btn.onclick = function() {
+                modal.style.display = "block";
+            }
+        
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+        
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        });
+    </script>
+</body>
+<footer>
+    <div class="footer-content">
+        <a href="#" id="show-rules">Rules</a>
+    </div>
+</footer>
+<div id="rules-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Ultimate Tic Tac Toe Rules</h2>
+            <p>Mark squares to win boards. Win 3 boards in a row to win the game.</p>
+            <ul>
+                <li>Play in the board dictated by your opponent's last move.</li>
+                <li>If sent to a won board, choose any board.</li>
+                <li>Game ends when one wins 3 boards in a row or all squares fill up.</li>
+            </ul>
+    </div>
+</div>
+<footer>
+</footer>
+</html>
+
