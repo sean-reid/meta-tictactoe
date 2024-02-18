@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ultimate Tic-Tac-Toe</title>
     <style>
+        :root {
+            /* Define base sizes */
+            --cell-size: 15vw; /* Adjust cell size based on viewport width */
+            --cell-min-size: 30px; /* Minimum cell size */
+            --cell-max-size: 45px; /* Maximum cell size */
+        }
         body {
             display: flex;
             justify-content: center;
@@ -12,41 +18,58 @@
             height: 100vh;
             background-color: #f0f0f0;
             margin: 0;
+            padding: 10px;
+            overflow: hidden;
         }
         .game-board {
             display: grid;
-            grid-template-columns: repeat(3, 155px); /* Adjust size to fit sub-boards */
-            gap: 10px; /* Space between sub-boards */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: calc(100vw - 20px); /* Adjust based on viewport width, subtract body padding */
             padding: 10px;
-            border: 0px solid #444; /* Optional: border around the entire game board */
+            border: 0px solid #444;
             background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Optional: shadow for visual depth */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         .sub-board {
             display: grid;
-            grid-template-columns: repeat(3, 45px);
-            gap: 2px; /* Space between cells within a sub-board */
-            padding: 5px; /* Padding inside sub-boards, creating visual separation */
-            border: 1px solid #aaa; /* Light border for sub-boards */
-            border-radius: 10px; /* Rounded corners for sub-boards */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding: 5px;
+            border: 1px solid #aaa;
+            border-radius: 10px;
         }
         .cell {
-            width: 45px;
-            height: 45px;
-            border: 1px solid #ddd; /* Light border for cells */
-            border-radius: 5px; /* Rounded corners for cells */
+            width: calc((var(--cell-size) - 14px) / 3); /* Subtract gaps and divide by 3 */
+            height: calc((var(--cell-size) - 14px) / 3);
+            min-width: var(--cell-min-size);
+            min-height: var(--cell-min-size);
+            max-width: var(--cell-max-size);
+            max-height: var(--cell-max-size);
+            border: 1px solid #ddd;
+            border-radius: 5px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            user-select: none; /* Prevent text selection */
-            transition: background-color 0.2s; /* Smooth background transition */
+            user-select: none;
+            transition: background-color 0.2s;
         }
         .cell.o { /* Custom class for O cells */
             background-color: #ffcccc; /* Reddish background for O */
         }
         .cell.x { /* Custom class for x cells */
             background-color: #ccffcc; /* Greenish background for X */
+        }
+        /* Responsive adjustments for very small screens */
+        @media (max-width: 600px) {
+            :root {
+                --cell-size: 50vw; /* Increase cell size for better visibility on small screens */
+            }
+            .cell {
+                width: calc((50vw - 14px) / 9); /* Adjust cell width based on new viewport width */
+                height: calc((50vw - 14px) / 9); /* Adjust cell height based on new viewport width */
+            }
         }
         .modal {
             display: none; /* Hidden by default */
