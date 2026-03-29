@@ -1,0 +1,6 @@
+# Build artifacts
+wasm/target/
+wasm/pkg/
+
+# OS files
+.DS_Store
