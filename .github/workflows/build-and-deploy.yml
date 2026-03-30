@@ -46,7 +46,7 @@ jobs:
       - name: Prepare site
         run: |
           mkdir -p _site
-          cp index.html style.css game.js _site/
+          cp index.html style.css game.js favicon.svg _site/
           cp -r wasm/pkg _site/wasm-pkg
           # Rewrite import path for deployed site
           sed -i "s|./wasm/pkg/|./wasm-pkg/|g" _site/game.js
