@@ -125,7 +125,7 @@ function handleCellClick(subBoardIndex, cellIndex) {
         renderBoard(); // Show player's move first
         // Small delay so the player sees their move before AI responds
         setTimeout(() => {
-            const bestMove = Minimax.find_best_move(game, 3);
+            const bestMove = Minimax.find_best_move(game, 20);
             game.apply_json_move(bestMove);
             renderBoard();
         }, 50);

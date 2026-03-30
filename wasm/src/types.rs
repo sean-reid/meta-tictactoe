@@ -55,7 +55,7 @@ impl Cell {
 }
 
 #[wasm_bindgen]
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct MetaMove {
     pub board_row: usize,
     pub board_col: usize,

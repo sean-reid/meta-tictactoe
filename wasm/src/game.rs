@@ -1,5 +1,5 @@
 use crate::board::MiniBoard;
-use crate::types::{GamePlayer, MetaMove, LINES};
+use crate::types::{Cell, GamePlayer, MetaMove, LINES};
 
 #[derive(Clone, Copy, Debug)]
 pub struct MetaGameState {
@@ -7,6 +7,12 @@ pub struct MetaGameState {
     pub current_player: GamePlayer,
     pub next_board: Option<(usize, usize)>,
 }
+
+const BOARD_WEIGHT: [[i32; 3]; 3] = [
+    [3, 2, 3],
+    [2, 5, 2],
+    [3, 2, 3],
+];
 
 impl MetaGameState {
     pub fn new() -> Self {
@@ -40,7 +46,7 @@ impl MetaGameState {
         for (br, bc) in boards_to_check {
             for r in 0..3 {
                 for c in 0..3 {
-                    if self.boards[br][bc].cells[r][c] == crate::types::Cell::Empty {
+                    if self.boards[br][bc].cells[r][c] == Cell::Empty {
                         moves.push(MetaMove {
                             board_row: br,
                             board_col: bc,
@@ -58,7 +64,6 @@ impl MetaGameState {
     pub fn apply_move(&mut self, mov: &MetaMove) -> bool {
         if let Some((nbr, nbc)) = self.next_board {
             if nbr != mov.board_row || nbc != mov.board_col {
-                // If the forced board is still playable, reject
                 if self.boards[nbr][nbc].winner.is_none() && !self.boards[nbr][nbc].is_full() {
                     return false;
                 }
@@ -101,40 +106,99 @@ impl MetaGameState {
         self.check_global_winner().is_some() || self.is_global_board_full()
     }
 
-    pub fn evaluate_global(&self) -> i32 {
-        let mut score = 0;
+    /// Evaluate from `player`'s perspective. Positive = good for `player`.
+    pub fn evaluate_for(&self, player_id: i32) -> i32 {
+        let player = if player_id == GamePlayer::X as i32 { GamePlayer::X } else { GamePlayer::O };
+        let opponent = player.switch();
 
+        // Terminal
+        if let Some(winner) = self.check_global_winner() {
+            return if winner == player { 100_000 } else { -100_000 };
+        }
+
+        let mut score: i32 = 0;
+
+        // --- Global line analysis ---
         for line in &LINES {
-            let mut player_count = 0;
-            let mut opponent_count = 0;
-            let mut line_score = 0;
+            let mut p_won = 0i32;
+            let mut o_won = 0i32;
+            let mut p_threats = 0i32; // boards where player is close to winning
+            let mut o_threats = 0i32;
+            let mut contested_score = 0i32;
 
-            for &(row, col) in line {
-                match self.boards[row][col].winner {
-                    Some(w) if w == self.current_player => player_count += 1,
-                    Some(_) => opponent_count += 1,
+            for &(r, c) in line {
+                let weight = BOARD_WEIGHT[r][c];
+                let board = &self.boards[r][c];
+
+                match board.winner {
+                    Some(w) if w == player => {
+                        p_won += 1;
+                        score += weight * 40;
+                    }
+                    Some(_) => {
+                        o_won += 1;
+                        score -= weight * 40;
+                    }
                     None => {
-                        line_score += self.boards[row][col].evaluate(self.current_player);
+                        let board_eval = board.evaluate_detailed(player);
+                        contested_score += board_eval * weight;
+
+                        // Check if player/opponent has a near-win on this sub-board
+                        if board.has_two_in_row(player) { p_threats += 1; }
+                        if board.has_two_in_row(opponent) { o_threats += 1; }
                     }
                 }
             }
 
-            score += score_line(player_count, opponent_count);
-            score += line_score;
+            score += global_line_score(p_won, o_won);
+
+            // Threats along global lines amplify the line's value
+            if o_won == 0 {
+                score += p_threats * 30;
+            }
+            if p_won == 0 {
+                score -= o_threats * 30;
+            }
+
+            score += contested_score;
+        }
+
+        // --- Routing analysis ---
+        // Penalize states where we're forced to a board that's bad for us
+        if self.current_player == player {
+            if let Some((nr, nc)) = self.next_board {
+                let target = &self.boards[nr][nc];
+                if target.winner.is_none() && !target.is_full() {
+                    // If opponent can win the target board immediately, that's very bad
+                    if target.has_winning_move(opponent) {
+                        score -= 300;
+                    }
+                }
+            }
+        } else {
+            // Opponent is to move; if they're forced somewhere bad for them, good for us
+            if let Some((nr, nc)) = self.next_board {
+                let target = &self.boards[nr][nc];
+                if target.winner.is_none() && !target.is_full() {
+                    if target.has_winning_move(player) {
+                        score += 300;
+                    }
+                }
+            }
         }
 
         score
     }
 }
 
-fn score_line(player_count: i32, opponent_count: i32) -> i32 {
-    match (player_count, opponent_count) {
-        (3, _) => 1000,
-        (_, 3) => -1000,
-        (2, 0) => 100,
-        (0, 2) => -100,
-        (1, 0) => 10,
-        (0, 1) => -10,
-        _ => -5,
+fn global_line_score(player: i32, opponent: i32) -> i32 {
+    match (player, opponent) {
+        (3, _) => 10_000,
+        (_, 3) => -10_000,
+        (2, 0) => 800,
+        (0, 2) => -800,
+        (1, 0) => 60,
+        (0, 1) => -60,
+        _ => 0,
     }
 }
